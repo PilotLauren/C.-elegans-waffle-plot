@@ -1,0 +1,309 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+####Waffle plot of basement membrane composition surrounding the pharynx and gonad in synchornized L1 worms
+
+test of another methods to display the composition of the pharyngeal and gonadal BMs for figure 3 of the BM toolkit paper. A waffle chart displays data like a rectangular pie chart, I think this works because it makes the 'parts per whole' concept stand out more and, if we emphazise that this is per unit area, will make it clear pharyngeal BM is denser compared to the gonadal BM.
+
+I used the L1_composition_052219.csv data. I excluded things based on visual presence or absence. Excluded from the pharynx are: him-4, pxn-2, and mig-6l. Excluded from the gonad are: him-4, pxn-2, pxn-1, mig-6l, spon-1, and agr-1. 
+
+Each square is equal to the mean of peroxidasin (pxn-1) in the pharynx as it is the lowest expressed component marked as present in a BM based on the above justification.
+
+I will call these squares something like a "matrix unit (MU), "unit of matrix (UM)", "Basement membrane unit (BMU)", "Matrix Compostion Unit (MCU)", etc. I rounded to the nearest whole number
+ 
+
+```{r}
+library(ggplot2)
+library(waffle)
+library(viridis)
+library(dplyr)
+library(RColorBrewer)
+library(gridExtra)
+waffledata <- read.csv("/Users/Dan/Desktop/BM composition/L1_composition_081319_unc52exononly.csv")
+waffledata1 <- data.frame(waffledata)
+agw <- aggregate(waffledata1$bksubmean, by = list(Gene = waffledata1$Gene, Organ = waffledata1$Organ), mean)
+norm <- lapply(agw$x, function(x) (x/286.1))
+agw$norm <- unlist(norm)
+present <- subset(agw, agw$norm >=1)
+present$norm <- lapply(present$norm, function(x) ceiling(x))
+present$norm <- unlist(present$norm)
+present$Gene <- factor(present$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "FBL-1", "SPON-1", "UNC-52", "PXN-1"))
+present <- present[order(present$Gene),]
+pharynx <- subset(present, present$Organ == "Pharynx")
+gonad <- subset(present, present$Organ == "Gonad")
+print(pharynx)
+print(gonad)
+w1 <- waffle(pharynx$norm, rows = 10, size = 0.5) + 
+       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3","#FDB462","#B3DE69",
+                                    "#FCCDE5", "#D9D9D9","#BC80BD", "#CCEBC5"), 
+                         name = "Protein", 
+                         labels = pharynx$Gene) +
+       theme(legend.text = element_text(size = 12)) +
+       theme(legend.title = element_text(face = "bold", size = 16))
+w2 <- waffle(gonad$norm, rows = 10,size = 0.5) +
+       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462","#B3DE69", 
+                                    "#CCEBC5"), 
+                         name = "Protein", 
+                         labels = gonad$Gene) +
+       theme(legend.text = element_text(size = 12)) +
+       theme(legend.title = element_text(face = "bold", size = 16))
+w1
+w2
+
+```
+
+This notebook contains different plotting options of the L1 Pharynx vs Gonad BM composition data for figures 3 and S5 of the BM toolkit paper.
+
+```{r}
+## Plot showing intensity in pharynx vs gonad not faceted
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+library(ggpubr)
+gonadcol <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+gonadcol1 <- data.frame(gonadcol)
+gonadcol1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+gonadcol1$Gene <- factor(gonadcol1$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "UNC-52", "FBL-1", "SPON-1", "PXN-1", "MIG-6l", "HIM-4"))
+ggplot(gonadcol1, aes(x = Gene, y = bksubmean, fill = Organ)) +
+       geom_boxplot(position = position_dodge(1)) + 
+       scale_fill_brewer(palette = "Greys", direction = -1) +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                            dodge.width = 1, seed = NA), shape = 21, size = 0.5) +
+       theme_pubr() +
+       theme(axis.text.x = element_text(face="bold", angle=45, vjust = -0.1))
+       #theme(legend.position = "none") 
+#ggsave("L1_multiorgan_com_boxplot_nofacet_053019.pdf", path = "/Users/Dan/Desktop", 
+       #width = 5.5, height = 3, units = "in", useDingbats = FALSE)
+```
+
+###Plot showing all data together on one plot - no faceting or subsetting
+```{r}
+## Plot showing intensity in pharynx vs gonad not faceted
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+library(ggpubr)
+gonadcol <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+gonadcol1 <- data.frame(gonadcol)
+gonadcol1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+gonadcol1$Gene <- factor(gonadcol1$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "UNC-52", "FBL-1", "SPON-1", "PXN-1", "MIG-6l", "HIM-4"))
+ggplot(gonadcol1, aes(x = Gene, y = bksubmean, fill = Organ)) +
+       geom_boxplot(position = position_dodge(1)) + 
+       scale_fill_brewer(palette = "Greys", direction = -1) +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                            dodge.width = 1, seed = NA), shape = 21, size = 0.5) +
+       theme_pubr() +
+       theme(axis.text.x = element_text(face="bold", angle=45, vjust = -0.1)) +
+       scale_y_log10()
+       #theme(legend.position = "none") 
+#ggsave("L1_multiorgan_com_boxplot_nofacet_053019.pdf", path = "/Users/Dan/Desktop", 
+       #width = 5.5, height = 3, units = "in", useDingbats = FALSE)
+```
+
+###Plots of each individual gene between organs - individually scaled - no faceting
+```{r}
+#loop to create individual graphs for each gene
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+library(ggpubr)
+gonadcol <- read.csv("/Volumes/BM Toolkit/Data sets for paper/Section 2 - L1 organ comparison/BM composition L1 - organ comparison/analysis/excel data files/L1_composition_060519.csv")
+gonadcol1 <- data.frame(gonadcol)
+gonadcol1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+uniquegenes <- unique(gonadcol1$Gene)
+for (i in uniquegenes) {
+       gonadcol3 <-subset(gonadcol1,(gonadcol1$Gene == i))
+       filename <- paste(i, "_L1_comp.PDF")
+       plot <- ggplot(gonadcol3, aes(x = Gene, y = bksubmean, fill = Organ)) +
+                     geom_boxplot(position = position_dodge(1)) + 
+                     scale_fill_brewer(palette = "Greys", direction = -1) +
+                     geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                             dodge.width = 1, seed = NA), shape = 21, size = 2) +
+                     theme_pubr() +
+                     stat_compare_means(method = "t.test", paired = TRUE)+
+                     labs(y = "Fluoresence intensity (rfu)") +
+                     theme(legend.position = "none",
+                            axis.title.x = element_blank(),
+                            axis.text.x = element_blank(),
+                            axis.title.y = element_text(face = "bold"))
+       print(plot)
+       ggsave(filename, 
+              path = "/Users/Dan/Desktop/compplots", 
+              width = 2, height = 3, units = "in", useDingbats = FALSE)
+       
+}
+
+
+
+```
+
+####Statistics comparing levels of each gene between organs - single paired t.test comparisons per gene
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(ggpubr)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+bmcomp1 <- data.frame(bmcomp)
+uniquegenes <- unique(bmcomp1$Gene)
+for (i in uniquegenes) {
+       bmcomp2 <-subset(bmcomp1,(bmcomp1$Gene == i))
+       ttest <- t.test(bmcomp2$bksubmean ~ bmcomp2$Organ, paired = TRUE)
+       print(i)
+       print(ttest)
+}
+       
+```
+
+####Same as above, but comparing levels of each gene between organs - all pairwise comparisons
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(ggpubr)
+options(max.print=1000000)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+bmcomp1 <- data.frame(bmcomp)
+anova <- aov(bksubmean ~ (Organ*Gene), data = bmcomp1)
+summary(anova)
+thsd <- TukeyHSD(anova, ordered = TRUE)
+print(thsd)
+ 
+```
+
+##Same as above but making single paired t.test comparisons per individual gene only between organs
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(ggpubr)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+bmcomp1 <- data.frame(bmcomp)
+uniquegenes <- unique(bmcomp1$Gene)
+for (i in uniquegenes) {
+       bmcomp2 <-subset(bmcomp1,(bmcomp1$Gene == i))
+       ttest <- t.test(bmcomp2$bksubmean ~ bmcomp2$Organ, paired = TRUE)
+       print(i)
+       print(ttest)
+}
+       
+```
+
+#####Plots showing data broken up by organ
+###Faceted plot showing intensity in pharynx vs gonad faceted by organ
+```{r}
+## Faceted plot showing intensity in pharynx vs gonad faceted by organ
+library(ggplot2)
+library(ggpubr)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+gonadcol <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+gonadcol1 <- data.frame(gonadcol)
+gonadcol1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+gonadcol1$Gene <- factor(gonadcol1$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "UNC-52", "FBL-1", "SPON-1", "PXN-1", "MIG-6l", "HIM-4"))
+ggplot(gonadcol1, aes(x = Gene, y = bksubmean, fill = Organ)) +
+       geom_boxplot(position = position_dodge()) + 
+       scale_fill_brewer(palette = "Greys", direction = -1) +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                            dodge.width = 1, seed = NA), shape = 21, size = 2) +
+       facet_grid(gonadcol1$Organ) +
+       theme_pubr() +
+       theme(axis.text.x = element_text(face="bold", angle=45, vjust = -0.1)) +
+       theme(legend.position = 'none') 
+#ggsave("L1_multiorgan_com_boxplot_053019.pdf", path = "/Users/Dan/Desktop", 
+       #width = 5.5, height = 2.3, units = "in")
+```
+
+###Faceted plot showing intensity in pharynx vs gonad faceted by gene
+```{r}
+## Faceted plot showing intensity in pharynx vs gonad faceted by gene
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+gonadcol <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+gonadcol1 <- data.frame(gonadcol)
+gonadcol1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+gonadcol1$Gene <- factor(gonadcol1$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "UNC-52", "FBL-1", "SPON-1", "PXN-1", "MIG-6l", "HIM-4"))
+ggplot(gonadcol1, aes(x = Organ, y = bksubmean, fill = Organ)) +
+       geom_boxplot(position = position_dodge()) + 
+       scale_fill_brewer(palette = "Greys", direction = 1) +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                            dodge.width = 1, seed = NA), shape = 21, size = 2) +
+       facet_grid(gonadcol1$Gene) +
+       theme_pubr() +
+       scale_y_log10() +
+       theme(legend.position = 'none')
+      
+```
+
+###Faceted plot showing intensity in pharynx vs gonad faceted by gene in two rows
+```{r}
+## Faceted plot showing intensity in pharynx vs gonad faceted by gene in two rows
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(forcats)
+library(ggpubr)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+bmcomp1 <- data.frame(gonadcol)
+bmcomp1$Organ <- factor(gonadcol1$Organ, levels = c("Pharynx", "Gonad"))
+gonadcol1$Gene <- factor(gonadcol1$Gene, levels = c("MIG-6s", "EMB-9", "LAM-2", "NID-1", "AGR-1", "CLE-1", 
+                                                "UNC-52", "FBL-1", "SPON-1", "PXN-1", "MIG-6l", "HIM-4"))
+ggplot(bmcomp1, aes(x = Organ, y = bksubmean, fill = Organ)) +
+       geom_boxplot(position = position_dodge()) + 
+       scale_fill_brewer(palette = "Greys", direction = -1) +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+                            dodge.width = 1, seed = NA), shape = 21, size = 2) +
+       facet_wrap(gonadcol1$Gene, nrow = 2) +
+       theme_pubr() +
+       geom_point(position=position_jitterdodge(jitter.width = NULL, jitter.height = 0,
+              dodge.width = 1, seed = NA), shape = 21, size = 2) 
+      
+
+```
+
+####Statistics comparing levels of each gene within the pharynx. Using both pariwise ttests with bonferroni correction and Tukey HSD tests.
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(ggpubr)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_052219.csv")
+bmcomp1 <- data.frame(bmcomp)
+bmcompPharynx <- subset(bmcomp1, bmcomp1$Organ == "Pharynx")
+anova <- aov(bksubmean ~ Gene, data = bmcompPharynx)
+summary(anova)
+thsd <- TukeyHSD(anova, ordered = TRUE)
+print(thsd)
+pairwise.t.test(bmcompPharynx$bksubmean, bmcompPharynx$Gene,
+                 p.adjust.method = "bonferroni")
+
+```
+
+
+####Statistics comparing levels of each gene within the Gonad
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(ggpubr)
+bmcomp <- read.csv("/Users/Dan/Desktop/L1_composition_053019_alltags.csv")
+bmcomp1 <- data.frame(bmcomp)
+bmcompGonad <- subset(bmcomp1, bmcomp1$Organ == "Gonad")
+anova <- aov(bksubmean ~ Gene, data = bmcompGonad)
+summary(anova)
+thsd <- TukeyHSD(anova, ordered = TRUE)
+print(thsd)
+pairwise.t.test(bmcompGonad$bksubmean, bmcompGonad$Gene,
+                 p.adjust.method = "bonferroni")
+
+```
+
+
