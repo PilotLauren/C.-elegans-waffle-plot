@@ -1,6 +1,189 @@
 ---
-title: "Aviation Cleaning"
+title: "BM Waffle"
 author: "Lauren Puig"
 format: pdf
 editor: visual
 ---
+
+```{r}
+#| label: load-packages
+#| message: false
+library(ggplot2)
+library(waffle)
+library(viridis)
+library(dplyr)
+library(RColorBrewer)
+library(gridExtra)
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+#| label: clean-date
+
+entire_waffle <- read_excel("entire waffle.xlsx")
+
+day1lam2m <- 1992.525
+day1lam2p <- 2990.719
+
+entire_waffle$day <- as.character(entire_waffle$day)
+  
+averageperday <- entire_waffle |>
+  filter(stage == "L1" & protein == "lam-2") |>
+  group_by(day) |>
+  summarize(normmuscle = mean(muscle, na.rm = TRUE)/day1lam2m, normpharynx = mean(pharynx)/day1lam2p)
+
+averageperday
+
+
+
+normalized <- entire_waffle |>
+  mutate(
+    muscle = if_else(day == "2024-07-02", muscle * 1.0701797 , muscle),
+    muscle = if_else(day == "2024-09-02", muscle*0.7666955, muscle),
+    muscle = if_else(day == "2024-17-02", muscle*1.1876939, muscle),
+    muscle = if_else(day == "2024-18-02", muscle*1.3837764, muscle),
+    muscle = if_else(day == "2024-24-02", muscle*1.0292775, muscle),
+    muscle = if_else(day == "2024-02-03", muscle*0.9228555, muscle),
+    muscle = if_else(day == "2024-14-04", muscle*1.0124508, muscle),
+    pharynx = if_else(day == "2024-07-02", pharynx*1.0323166, pharynx),
+    pharynx = if_else(day == "2024-09-02", pharynx*0.8587952, pharynx),
+    pharynx = if_else(day == "2024-17-02", pharynx*0.9758086, pharynx),
+    pharynx = if_else(day == "2024-18-02", pharynx*1.1223797, pharynx),
+    pharynx = if_else(day == "2024-24-02", pharynx*0.9091423, pharynx),
+    pharynx = if_else(day == "2024-02-03", pharynx*1.1001416, pharynx),
+    pharynx = if_else(day == "2024-14-04", pharynx*1.0589964, pharynx),
+    muscle = if_else(muscle <= 0, 0, muscle),
+    pharynx = if_else(pharynx <= 0, 0, pharynx)
+  )
+
+normalized
+```
+
+```{r}
+#| label: normalize
+
+
+avged <- normalized |>
+  group_by(stage, protein)|>
+  summarise(n = n(), muscle = mean(muscle, na.rm = TRUE), pharynx = mean(pharynx, na.rm = TRUE), .groups = "drop")
+avged
+
+unc52 <- data.frame("unc-52", 0, 0)
+names(unc52) <- c("protein", "pharynx", "muscle")
+
+
+filt <- avged |>
+  filter(!protein == "unc-52")
+
+minmuscl <- min(filt$muscle)
+minpharynx <- min(filt$pharynx)
+
+minmuscl
+minpharynx
+
+postgast <- avged |>
+  filter(stage == "post-gastrulation") |>
+  mutate(muscle = muscle/ (min(muscle)),
+         pharynx = pharynx/(min(pharynx))) |>
+  select(protein, pharynx, muscle)
+
+pg <- rbind(postgast, unc52)
+
+comma <- avged |>
+  filter(stage == "comma") |>
+  mutate(muscle = muscle/ (220),
+         pharynx = pharynx/(220)) |>
+  select(protein, pharynx, muscle)
+
+
+twofold <- avged |>
+  filter(stage == "twofold") |>
+  mutate(muscle = muscle/ (220),
+         pharynx = pharynx/(220)) |>
+  select(protein, pharynx, muscle)
+
+L1 <- avged |>
+  filter(stage == "L1") |>
+  mutate(muscle = muscle/ (220),
+         pharynx = pharynx/(220)) |>
+  select(protein, pharynx, muscle)
+
+comma <- rbind(comma, unc52)
+
+twofold
+L1
+```
+
+```{r}
+#| label: geom-waffle
+
+ggplot(avged, aes(fill = protein, values = pharynx)) +
+  facet_wrap(~stage) +
+  geom_waffle(make_proportional = TRUE, na.rm = TRUE, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+  theme_minimal()
+
+```
+
+```{r}
+#| label: waffle
+#| message: false
+
+waffle(pg, rows = 8, size = 0.5, 
+         colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"),
+         title = "Post Gastrulation Pharynx", keep = TRUE)
+
+waffle(c(pg$muscle), rows = 8, size = 0.5,
+         colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"),
+         title = "Post Gastrulation Muscle", legend_pos = "none")
+
+
+waffle(comma$pharynx, rows = 10, size = 0.5) + 
+       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), 
+                         name = "Protein", 
+                         labels = comma$protein) +
+       theme(legend.text = element_text(size = 12)) +
+       theme(legend.title = element_text(face = "bold", size = 16)) +
+       labs(
+         title = "Comma Pharynx"
+       )
+waffle(comma$muscle, rows = 7,size = 0.5) +
+       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), 
+                         name = "Protein", 
+                         labels = comma$protein) +
+       theme(legend.text = element_text(size = 12)) +
+       theme(legend.title = element_text(face = "bold", size = 16)) +
+  labs(
+         title = "Comma Muscle"
+       )
+#
+
+waffle(twofold$muscle, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"))  +
+  labs(
+         title = "Twofold Muscle"
+       )
+
+waffle(twofold$pharynx, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+  labs(
+         title = "Twofold Pharynx"
+       )
+
+waffle(L1$muscle, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+  labs(
+         title = "L1 Muscle"
+       )
+
+waffle(L1$pharynx, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+  labs(
+         title = "L1 Pharynx"
+       )
+```
+
+\
+
+```{r}
+#| label: large-plot
+scale_fill_manual(values = palette(n = 6)
+                         name = "Protein", 
+                         labels = postgast$protein)+
+```
