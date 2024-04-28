@@ -54,7 +54,14 @@ normalized <- entire_waffle |>
     pharynx = if_else(day == "2024-02-03", pharynx*1.1001416, pharynx),
     pharynx = if_else(day == "2024-14-04", pharynx*1.0589964, pharynx),
     muscle = if_else(muscle <= 0, 0, muscle),
-    pharynx = if_else(pharynx <= 0, 0, pharynx)
+    pharynx = if_else(pharynx <= 0, 0, pharynx),
+    protein = if_else(protein == "lam-2", "LAM-2", protein),
+    protein = if_else(protein == "let-2", "LET-2", protein),
+    protein = if_else(protein == "emb-9", "EMB-9", protein),
+    protein = if_else(protein == "mig-6", "MIG-6", protein),
+    protein = if_else(protein == "nid-1", "NID-1", protein),
+    protein = if_else(protein == "unc-52", "UNC-52", protein)
+
   )
 
 normalized
@@ -67,20 +74,18 @@ normalized
 avged <- normalized |>
   group_by(stage, protein)|>
   summarise(n = n(), muscle = mean(muscle, na.rm = TRUE), pharynx = mean(pharynx, na.rm = TRUE), .groups = "drop")
-avged
+
 
 unc52 <- data.frame("unc-52", 0, 0)
 names(unc52) <- c("protein", "pharynx", "muscle")
 
 
 filt <- avged |>
-  filter(!protein == "unc-52")
+  filter(!protein == "UNC-52")
 
 minmuscl <- min(filt$muscle)
 minpharynx <- min(filt$pharynx)
 
-minmuscl
-minpharynx
 
 postgast <- avged |>
   filter(stage == "post-gastrulation") |>
@@ -107,21 +112,22 @@ L1 <- avged |>
   filter(stage == "L1") |>
   mutate(muscle = muscle/ (220),
          pharynx = pharynx/(220)) |>
-  select(protein, pharynx, muscle)
+  select(protein, muscle, pharynx)
 
 comma <- rbind(comma, unc52)
-
-twofold
-L1
+comma
+avged
 ```
 
 ```{r}
 #| label: geom-waffle
+#| eval: false
+#| include: false
 
-ggplot(avged, aes(fill = protein, values = pharynx)) +
-  facet_wrap(~stage) +
-  geom_waffle(make_proportional = TRUE, na.rm = TRUE, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
-  theme_minimal()
+#ggplot(avged, aes(fill = protein, values = pharynx)) +
+  #facet_wrap(~stage) +
+  #geom_waffle(na.rm = TRUE, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+  #theme_minimal()
 
 ```
 
@@ -129,51 +135,41 @@ ggplot(avged, aes(fill = protein, values = pharynx)) +
 #| label: waffle
 #| message: false
 
-waffle(pg, rows = 8, size = 0.5, 
-         colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"),
+waffle(pg$pharynx, rows = 10, size = 0.5, 
+         colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none",
          title = "Post Gastrulation Pharynx", keep = TRUE)
 
-waffle(c(pg$muscle), rows = 8, size = 0.5,
+waffle(c(pg$muscle), rows = 10, size = 0.5,
          colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"),
          title = "Post Gastrulation Muscle", legend_pos = "none")
 
 
-waffle(comma$pharynx, rows = 10, size = 0.5) + 
-       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), 
-                         name = "Protein", 
-                         labels = comma$protein) +
-       theme(legend.text = element_text(size = 12)) +
-       theme(legend.title = element_text(face = "bold", size = 16)) +
+waffle(comma$pharynx, rows = 10, size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none") +
        labs(
          title = "Comma Pharynx"
        )
-waffle(comma$muscle, rows = 7,size = 0.5) +
-       scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), 
-                         name = "Protein", 
-                         labels = comma$protein) +
-       theme(legend.text = element_text(size = 12)) +
-       theme(legend.title = element_text(face = "bold", size = 16)) +
+waffle(comma$muscle, rows = 10, size = 0.5,  colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none") +
   labs(
          title = "Comma Muscle"
        )
 #
 
-waffle(twofold$muscle, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"))  +
+waffle(twofold$muscle, rows = 10,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none")  +
   labs(
          title = "Twofold Muscle"
        )
 
-waffle(twofold$pharynx, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+waffle(twofold$pharynx, rows = 10,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none") +
   labs(
          title = "Twofold Pharynx"
        )
 
-waffle(L1$muscle, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+waffle(L1, rows = 10,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none") +
   labs(
          title = "L1 Muscle"
        )
 
-waffle(L1$pharynx, rows = 7,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69")) +
+waffle(L1$pharynx, rows = 10,size = 0.5, colors = c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072","#FDB462", "#B3DE69"), legend_pos = "none") +
   labs(
          title = "L1 Pharynx"
        )
